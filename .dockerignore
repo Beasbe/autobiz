@@ -1,0 +1,11 @@
+# Контекст сборки Docker — папка AutoParser/ (здесь лежит Dockerfile).
+**/bin/
+**/obj/
+.vs/
+publish/
+out/
+*.log
+
+# Образцы заявок с персональными данными в образ не копируем:
+# монтируются при запуске (см. run.sh / README).
+AutoParser/data/

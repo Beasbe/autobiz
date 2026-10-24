@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <WindowsTfm>net8.0-windows10.0.19041.0</WindowsTfm>
+    <!-- Windows-проекты (OCR WinRT, WPF) собираются и под Linux: нужен только NuGet-референс Windows SDK, без runtime. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- ОС проверяется не TargetFramework, а OperatingSystem.IsXxx и [SupportedOSPlatform] поштучно. -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+</Project>

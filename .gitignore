@@ -1,0 +1,20 @@
+# Сборка
+bin/
+obj/
+.vs/
+*.user
+publish/
+TestResults/
+*.log
+
+# Результаты обработки и отладки
+out/
+AutoParser/data/**/AutoParser/
+
+# Образцы заявок: содержат персональные данные реальных клиентов,
+# в репозиторий не попадают. Пропуск тестов без них — DataFact.
+AutoParser/data/
+
+# Артефакты ОС
+.DS_Store
+Thumbs.db

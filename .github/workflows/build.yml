@@ -95,7 +95,7 @@ jobs:
       - name: Archive
         run: |
           if [ "${{ matrix.format }}" = "zip" ]; then
-            cd out && zip -r -q "../${{ matrix.artifact }}.zip" .
+            (cd out && zip -r -q "../${{ matrix.artifact }}.zip" .)
           else
             tar -czf "${{ matrix.artifact }}.tar.gz" -C out .
           fi

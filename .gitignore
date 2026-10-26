@@ -4,6 +4,7 @@ obj/
 .vs/
 *.user
 publish/
+publish-win/
 TestResults/
 *.log
 

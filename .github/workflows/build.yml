@@ -1,0 +1,151 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  # Тесты на Linux. OCR-зависимые тесты (OcrDataFact) без tesseract пропускаются,
+  # поэтому ставим его — иначе проверяется только текстовый слой.
+  test:
+    name: Tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install Tesseract (rus)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-rus
+
+      - name: Restore
+        run: dotnet restore AutoParser.Tests/AutoParser.Tests.csproj
+
+      - name: Test
+        env:
+          AUTO_PARSER_TEST_OCR: linux
+          AUTO_PARSER_TEST_OCR_LANG: rus
+        run: >
+          dotnet test AutoParser.Tests/AutoParser.Tests.csproj
+          -c Release --no-restore
+          --logger "trx;LogFileName=test.trx"
+          --results-directory TestResults
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: ignore
+
+  # WPF-приложение (Windows) и CLI (Windows/Linux).
+  # Всё self-contained: на целевой машине не нужен установленный .NET.
+  publish:
+    name: Publish (${{ matrix.artifact }})
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x64
+            format: zip
+            project: AutoParser.App/AutoParser.App.csproj
+            artifact: AutoParser-win-x64
+          - rid: win-arm64
+            format: zip
+            project: AutoParser.App/AutoParser.App.csproj
+            artifact: AutoParser-win-arm64
+          - rid: win-x64
+            format: zip
+            project: AutoParser.Cli/AutoParser.Cli.csproj
+            artifact: autoparser-cli-win-x64
+          - rid: linux-x64
+            format: tar.gz
+            project: AutoParser.Cli/AutoParser.Cli.csproj
+            artifact: autoparser-cli-linux-x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish
+        run: >
+          dotnet publish ${{ matrix.project }}
+          -c Release
+          -r ${{ matrix.rid }}
+          --self-contained true
+          -o out
+          -p:DebugType=none
+
+      - name: Archive
+        run: |
+          if [ "${{ matrix.format }}" = "zip" ]; then
+            cd out && zip -r -q "../${{ matrix.artifact }}.zip" .
+          else
+            tar -czf "${{ matrix.artifact }}.tar.gz" -C out .
+          fi
+          ls -lh "${{ matrix.artifact }}.${{ matrix.format }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.${{ matrix.format }}
+          if-no-files-found: error
+          retention-days: 30
+
+  # По тегу v* — прикрепить архивы к GitHub Release (кнопка «Download» на странице релиза).
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect archives
+        run: |
+          mkdir -p dist
+          find artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' \) -exec mv {} dist/ \;
+          ls -lh dist
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          body: |
+            Собранные версии AutoParser.
+
+            | Файл | Что это |
+            |---|---|
+            | `AutoParser-win-x64.zip` | WPF-приложение (Windows 10/11 x64), .NET внутри |
+            | `AutoParser-win-arm64.zip` | WPF-приложение (Windows on ARM) |
+            | `autoparser-cli-win-x64.zip` | CLI для Windows |
+            | `autoparser-cli-linux-x64.tar.gz` | CLI для Linux |
+
+            **Windows UI:** распакуйте архив и запустите `AutoParser.exe`. Для OCR нужен
+            языковой пакет «Русский» с компонентом «Распознавание текста».
+
+            **Linux CLI:** нужен `tesseract-ocr` с языком `rus`
+            (`apt install tesseract-ocr tesseract-ocr-rus`).

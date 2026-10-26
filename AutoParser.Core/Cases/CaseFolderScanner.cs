@@ -48,12 +48,12 @@ public static partial class CaseFolderScanner
     /// <summary>Номер заявки из пути: «У-26-154015-3020-004» → «У-26-154015/3020-004»; «Заявка№10878 26-130531 НТЭ» → «У-26-130531».</summary>
     public static string? ClaimNumberFromPath(string path)
     {
-        foreach (var part in path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Reverse())
+        foreach (var part in path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Reverse().ToArray())
         {
             var m = FullNumber().Match(part);
             if (m.Success) return $"У-{m.Groups[1].Value}-{m.Groups[2].Value}/{m.Groups[3].Value}-{m.Groups[4].Value}";
         }
-        foreach (var part in path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Reverse())
+        foreach (var part in path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Reverse().ToArray())
         {
             var m = ShortNumber().Match(part);
             if (m.Success) return $"У-{m.Groups[1].Value}-{m.Groups[2].Value}";
@@ -64,7 +64,7 @@ public static partial class CaseFolderScanner
     /// <summary>Вид экспертизы по имени папки: НТЭ / ИРУ.</summary>
     public static string ExpertiseKind(string folder)
     {
-        foreach (var part in folder.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Reverse())
+        foreach (var part in folder.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Reverse().ToArray())
         {
             if (Regex.IsMatch(part, @"\bИРУ\b")) return "ИРУ";
             if (Regex.IsMatch(part, @"\bНТЭ\b")) return "НТЭ";

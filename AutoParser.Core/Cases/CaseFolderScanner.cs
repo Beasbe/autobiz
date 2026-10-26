@@ -48,14 +48,16 @@ public static partial class CaseFolderScanner
     /// <summary>Номер заявки из пути: «У-26-154015-3020-004» → «У-26-154015/3020-004»; «Заявка№10878 26-130531 НТЭ» → «У-26-130531».</summary>
     public static string? ClaimNumberFromPath(string path)
     {
-        foreach (var part in path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Reverse().ToArray())
+        // Без LINQ-.Reverse(): для string[] компилятор выбирает Array.Reverse (void), а не Enumerable.Reverse.
+        var parts = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        for (int i = parts.Length - 1; i >= 0; i--)
         {
-            var m = FullNumber().Match(part);
+            var m = FullNumber().Match(parts[i]);
             if (m.Success) return $"У-{m.Groups[1].Value}-{m.Groups[2].Value}/{m.Groups[3].Value}-{m.Groups[4].Value}";
         }
-        foreach (var part in path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Reverse().ToArray())
+        for (int i = parts.Length - 1; i >= 0; i--)
         {
-            var m = ShortNumber().Match(part);
+            var m = ShortNumber().Match(parts[i]);
             if (m.Success) return $"У-{m.Groups[1].Value}-{m.Groups[2].Value}";
         }
         return null;
@@ -64,10 +66,11 @@ public static partial class CaseFolderScanner
     /// <summary>Вид экспертизы по имени папки: НТЭ / ИРУ.</summary>
     public static string ExpertiseKind(string folder)
     {
-        foreach (var part in folder.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Reverse().ToArray())
+        var parts = folder.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        for (int i = parts.Length - 1; i >= 0; i--)
         {
-            if (Regex.IsMatch(part, @"\bИРУ\b")) return "ИРУ";
-            if (Regex.IsMatch(part, @"\bНТЭ\b")) return "НТЭ";
+            if (Regex.IsMatch(parts[i], @"\bИРУ\b")) return "ИРУ";
+            if (Regex.IsMatch(parts[i], @"\bНТЭ\b")) return "НТЭ";
         }
         return "НТЭ";
     }
